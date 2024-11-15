@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Drunkard's Dungeon</title>
+		<style>
+			html {
+				font-family: system-ui;
+			}
+
+			body {
+				margin: 0;
+				height: 100dvh;
+				display: grid;
+				background: #273963;
+			}
+
+			canvas {
+				grid-area: 1/1;
+				width: 100vmin;
+				height: 100vmin;
+				aspect-ratio: 1/1;
+				margin: auto;
+				padding: 0;
+				image-rendering: pixelated;
+			}
+
+			small {
+				position: absolute;
+				top: 1vh;
+				left: 1vw;
+				color: #fff;
+				font-size: clamp(14px, 1.5vmax, 20px);
+				text-shadow: -1px 1px 0 #000, 1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+			}
+			small span {
+				font-size: clamp(11px, 1vmax, 14px);
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="tilemap" width="400" height="400"></canvas>
+		<canvas id="entities" width="400" height="400"></canvas>
+		<small>
+			press space to regenerate<br />
+			<span style="color: #999">WASD to move get the key</span>
+			<br />
+			<span style="color: #999">Avoid the enemies and get to the door</span>
+			<br />
+			<span>Green: player position</span>
+			<br />
+			<span>Red: enemy</span>
+			<br />
+			<span>Yellow: key</span>
+			<br />
+			<span>Blue: door</span>
+		</small>
+		<script>
+			const worldSize = 100;
+			const grid = 8;
+			const size = 1500;
+
+			const tilemap = {
+				canvas: document.querySelector('#tilemap'),
+				ctx: document.querySelector('#tilemap').getContext('2d'),
+				x: Math.round(worldSize / 2) * grid,
+				y: Math.round(worldSize / 2) * grid,
+				stagger: [grid, grid, grid, grid, grid, grid * 2, grid * 2],
+				keyPositions: [],
+
+				walk: () => {
+					const stagger = tilemap.stagger[Math.floor(Math.random() * tilemap.stagger.length)];
+					const directions = [
+						{ dx: 0, dy: stagger * -1 },
+						{ dx: 0, dy: stagger },
+						{ dx: stagger * -1, dy: 0 },
+						{ dx: stagger, dy: 0 },
+					];
+					const randomIndex = Math.floor(Math.random() * directions.length);
+					return directions[randomIndex];
+				},
+
+				generate: (steps) => {
+					tilemap.x = Math.round(worldSize / 2) * grid;
+					tilemap.y = Math.round(worldSize / 2) * grid;
+					tilemap.ctx.clearRect(0, 0, tilemap.canvas.width, tilemap.canvas.height);
+					tilemap.ctx.fillStyle = '#273963';
+					tilemap.ctx.fillRect(0, 0, tilemap.canvas.width, tilemap.canvas.height);
+					entities.player.hasKey = false;
+
+					let count = 0;
+					tilemap.keyPositions = [];
+					for (let i = 0; i < steps; i++) {
+						tilemap.ctx.fillStyle = '#909ed0';
+						const size = tilemap.stagger[Math.floor(Math.random() * tilemap.stagger.length)];
+						tilemap.ctx.fillRect(tilemap.x, tilemap.y, size + grid, size + grid);
+
+						const { dx, dy } = tilemap.walk();
+						tilemap.x += dx;
+						tilemap.y += dy;
+
+						if (tilemap.x < grid) {
+							tilemap.x = grid * 2;
+						}
+						if (tilemap.x >= tilemap.canvas.width - grid * 2) {
+							tilemap.x = tilemap.canvas.width - grid * 3;
+						}
+						if (tilemap.y < grid) {
+							tilemap.y = grid * 2;
+						}
+						if (tilemap.y >= tilemap.canvas.height - grid * 2) {
+							tilemap.y = tilemap.canvas.height - grid * 3;
+						}
+
+						if (count == 0) {
+							tilemap.keyPositions.push({ x: tilemap.x, y: tilemap.y });
+						}
+						if (count == Math.round(steps * 0.25)) {
+							tilemap.keyPositions.push({ x: tilemap.x, y: tilemap.y });
+						}
+						if (count == Math.round(steps * 0.5)) {
+							tilemap.keyPositions.push({ x: tilemap.x, y: tilemap.y });
+						}
+						if (count == Math.round(steps * 0.75)) {
+							tilemap.keyPositions.push({ x: tilemap.x, y: tilemap.y });
+						}
+						if (count == steps - 1) {
+							tilemap.keyPositions.push({ x: tilemap.x, y: tilemap.y });
+						}
+						count++;
+					}
+
+					tilemap.keyPositions.forEach((i, index) => {
+						if (index == 0) {
+							entities.player.x = i.x;
+							entities.player.y = i.y;
+							tilemap.ctx.fillStyle = '#909ed0';
+							tilemap.ctx.fillRect(i.x - grid, i.y - grid, grid * 3, grid * 3);
+						}
+						if (index == 1) {
+							entities.enemy1.x = i.x;
+							entities.enemy1.y = i.y;
+							tilemap.ctx.fillStyle = '#909ed0';
+							tilemap.ctx.fillRect(i.x - grid, i.y - grid, grid * 3, grid * 3);
+						}
+						if (index == 2) {
+							entities.key.x = i.x;
+							entities.key.y = i.y;
+							tilemap.ctx.fillStyle = '#909ed0';
+							tilemap.ctx.fillRect(i.x - grid, i.y - grid, grid * 3, grid * 3);
+						}
+						if (index == 3) {
+							entities.enemy2.x = i.x;
+							entities.enemy2.y = i.y;
+							tilemap.ctx.fillStyle = '#909ed0';
+							tilemap.ctx.fillRect(i.x - grid, i.y - grid, grid * 3, grid * 3);
+						}
+						if (index == 4) {
+							entities.door.x = i.x;
+							entities.door.y = i.y;
+							tilemap.ctx.fillStyle = '#909ed0';
+							tilemap.ctx.fillRect(i.x - grid, i.y - grid, grid * 3, grid * 3);
+						}
+					});
+					entities.draw();
+				},
+
+				onload: () => {
+					tilemap.canvas.width = worldSize * grid;
+					tilemap.canvas.height = worldSize * grid;
+					tilemap.ctx.fillStyle = 'rgba(39,57,99,0)';
+					tilemap.ctx.fillRect(0, 0, tilemap.canvas.width, tilemap.canvas.height);
+					tilemap.generate(size);
+				},
+			};
+
+			const entities = {
+				canvas: document.querySelector('#entities'),
+				ctx: document.querySelector('#entities').getContext('2d'),
+				spriteSheet: 'sprites.png',
+
+				collide: (direction) => {
+					if (tilemap.ctx.getImageData(entities.player.x + direction.x, entities.player.y + direction.y, entities.player.size, entities.player.size).data[1] == 158) {
+						return true;
+					} else {
+						return false;
+					}
+				},
+
+				player: {
+					x: Math.round(worldSize / 2) * grid,
+					y: Math.round(worldSize / 2) * grid,
+					size: grid,
+					speed: grid,
+					color: 'green',
+					hasKey: false,
+					sprite: new Image(),
+
+					draw: (player) => {
+						entities.player.sprite.src = entities.spriteSheet;
+						entities.ctx.drawImage(entities.player.sprite, 0, 0, player.size, player.size, player.x, player.y, player.size, player.size);
+					},
+
+					getKey: () => {
+						if (entities.player.x === entities.key.x && entities.player.y === entities.key.y) {
+							entities.player.hasKey = true;
+						}
+					},
+
+					door: () => {
+						if (entities.player.x === entities.door.x && entities.player.y === entities.door.y) {
+							if (entities.player.hasKey) {
+								tilemap.generate(size);
+							}
+						}
+					},
+
+					move: (player) => {
+						switch (event.key) {
+							case 'w':
+								if (entities.collide({ x: 0, y: -grid })) {
+									player.y -= player.speed;
+								}
+								break;
+							case 's':
+								if (entities.collide({ x: 0, y: grid })) {
+									player.y += player.speed;
+								}
+								break;
+							case 'a':
+								if (entities.collide({ x: -grid, y: 0 })) {
+									player.x -= player.speed;
+								}
+								break;
+							case 'd':
+								if (entities.collide({ x: grid, y: 0 })) {
+									player.x += player.speed;
+								}
+								break;
+						}
+						entities.enemy1.chase();
+						entities.enemy2.chase();
+						entities.player.getKey();
+						entities.player.door();
+						entities.draw();
+					},
+				},
+				key: {
+					x: 0,
+					y: 0,
+					size: grid,
+					color: 'yellow',
+					sprite: new Image(),
+
+					draw: (key) => {
+						entities.key.sprite.src = entities.spriteSheet;
+						entities.ctx.drawImage(entities.key.sprite, grid, 0, key.size, key.size, key.x, key.y, key.size, key.size);
+					},
+				},
+				door: {
+					x: 0,
+					y: 0,
+					size: grid,
+					color: 'blue',
+					sprite: new Image(),
+
+					draw: (door) => {
+						entities.door.sprite.src = entities.spriteSheet;
+						entities.ctx.drawImage(entities.door.sprite, grid * 2, 0, door.size, door.size, door.x, door.y, door.size, door.size);
+					},
+				},
+				enemy1: {
+					x: 0,
+					y: 0,
+					size: grid,
+					speed: grid,
+					direction: 0,
+					color: 'red',
+					sight: 75,
+					sprite: new Image(),
+
+					draw: (enemy1) => {
+						entities.enemy1.sprite.src = entities.spriteSheet;
+						entities.ctx.drawImage(entities.enemy1.sprite, grid * 3, 0, enemy1.size, enemy1.size, enemy1.x, enemy1.y, enemy1.size, enemy1.size);
+					},
+
+					collide: (direction) => {
+						if (tilemap.ctx.getImageData(entities.enemy1.x + direction.x, entities.enemy1.y + direction.y, entities.enemy1.size, entities.enemy1.size).data[1] == 158) {
+							return true;
+						} else {
+							return false;
+						}
+					},
+
+					patrol: () => {
+						this.direction = Math.floor(Math.random() * (3 + 1));
+						if (this.direction < 0) {
+							this.direction = 3;
+						}
+						if (this.direction > 3) {
+							this.direction = 0;
+						}
+
+						switch (this.direction) {
+							case 0:
+								if (entities.enemy1.collide({ x: grid, y: 0 })) entities.enemy1.x += entities.enemy1.speed;
+								break;
+							case 1:
+								if (entities.enemy1.collide({ x: 0, y: grid })) entities.enemy1.y += entities.enemy1.speed;
+								break;
+							case 2:
+								if (entities.enemy1.collide({ x: -grid, y: 0 })) entities.enemy1.x -= entities.enemy1.speed;
+								break;
+							case 3:
+								if (entities.enemy1.collide({ x: 0, y: -grid })) entities.enemy1.y -= entities.enemy1.speed;
+								break;
+						}
+						entities.draw();
+					},
+
+					chase: () => {
+						this.direction = Math.abs(Math.floor(Math.atan2(entities.player.y - entities.enemy1.y, entities.player.x - entities.enemy1.x)));
+						if (this.direction < 0) {
+							this.direction = 3;
+						}
+						if (this.direction > 3) {
+							this.direction = 0;
+						}
+						const distance = Math.round(Math.hypot(entities.player.x - entities.enemy1.x, entities.player.y - entities.enemy1.y));
+
+						if (distance <= entities.enemy1.sight) {
+							switch (direction) {
+								case 0:
+									if (entities.enemy1.collide({ x: grid, y: 0 })) entities.enemy1.x += entities.enemy1.speed;
+									break;
+								case 1:
+									if (entities.enemy1.collide({ x: 0, y: grid })) entities.enemy1.y += entities.enemy1.speed;
+									break;
+								case 2:
+									if (entities.enemy1.collide({ x: -grid, y: 0 })) entities.enemy1.x -= entities.enemy1.speed;
+									break;
+								case 3:
+									if (entities.enemy1.collide({ x: 0, y: -grid })) entities.enemy1.y -= entities.enemy1.speed;
+									break;
+								default:
+									return;
+									break;
+							}
+						} else {
+							entities.enemy1.patrol();
+						}
+						entities.draw();
+					},
+				},
+
+				enemy2: {
+					x: 0,
+					y: 0,
+					size: grid,
+					color: 'orange',
+					speed: grid,
+					direction: 0,
+					sight: 75,
+					sprite: new Image(),
+
+					draw: (enemy2) => {
+						entities.enemy2.sprite.src = entities.spriteSheet;
+						entities.ctx.drawImage(entities.enemy2.sprite, grid * 3, 0, enemy2.size, enemy2.size, enemy2.x, enemy2.y, enemy2.size, enemy2.size);
+					},
+
+					collide: (direction) => {
+						if (tilemap.ctx.getImageData(entities.enemy2.x + direction.x, entities.enemy2.y + direction.y, entities.enemy2.size, entities.enemy2.size).data[1] == 158) {
+							return true;
+						} else {
+							return false;
+						}
+					},
+
+					patrol: () => {
+						entities.enemy2.direction = Math.floor(Math.random() * (3 + 1));
+						if (entities.enemy2.direction < 0) {
+							entities.enemy2.direction = 3;
+						}
+						if (entities.enemy2.direction > 3) {
+							entities.enemy2.direction = 0;
+						}
+						switch (entities.enemy2.direction) {
+							case 0:
+								if (entities.enemy2.collide({ x: 0, y: -grid })) entities.enemy2.y -= entities.enemy2.speed;
+								break;
+							case 1:
+								if (entities.enemy2.collide({ x: 0, y: grid })) entities.enemy2.y += entities.enemy2.speed;
+								break;
+							case 2:
+								if (entities.enemy2.collide({ x: -grid, y: 0 })) entities.enemy2.x -= entities.enemy2.speed;
+								break;
+							case 3:
+								if (entities.enemy2.collide({ x: grid, y: 0 })) entities.enemy2.x += entities.enemy2.speed;
+								break;
+						}
+						entities.draw();
+					},
+
+					chase: () => {
+						entities.enemy2.direction = Math.floor(Math.atan2(entities.player.y - entities.enemy2.y, entities.player.x - entities.enemy2.x));
+						if (entities.enemy2.direction < 0) {
+							entities.enemy2.direction = 3;
+						}
+						if (entities.enemy2.direction > 3) {
+							entities.enemy2.direction = 0;
+						}
+
+						const distance = Math.round(Math.hypot(entities.player.x - entities.enemy2.x, entities.player.y - entities.enemy2.y));
+
+						if (distance <= entities.enemy2.sight) {
+							switch (entities.enemy2.direction) {
+								case 0:
+									if (entities.enemy2.collide({ x: grid, y: 0 })) entities.enemy2.x += entities.enemy2.speed;
+									break;
+								case 1:
+									if (entities.enemy2.collide({ x: 0, y: grid })) entities.enemy2.y += entities.enemy2.speed;
+									break;
+								case 2:
+									if (entities.enemy2.collide({ x: -grid, y: 0 })) entities.enemy2.x -= entities.enemy2.speed;
+									break;
+								case 3:
+									if (entities.enemy2.collide({ x: 0, y: -grid })) entities.enemy2.y -= entities.enemy2.speed;
+									break;
+								default:
+									return;
+									break;
+							}
+						} else {
+							entities.enemy2.patrol();
+						}
+						entities.draw();
+					},
+				},
+
+				onload: () => {
+					entities.canvas.width = worldSize * grid;
+					entities.canvas.height = worldSize * grid;
+					entities.draw();
+				},
+
+				draw: () => {
+					const w = entities.canvas.width;
+					entities.canvas.width = 1;
+					entities.canvas.width = w;
+
+					if (!entities.player.hasKey) {
+						entities.key.draw(entities.key);
+					}
+					entities.enemy1.draw(entities.enemy1);
+					entities.door.draw(entities.door);
+					entities.enemy2.draw(entities.enemy2);
+					entities.player.draw(entities.player);
+				},
+			};
+
+			window.onload = () => {
+				entities.onload();
+				tilemap.onload();
+				entities.player.move(entities.player);
+			};
+
+			window.onkeydown = (event) => {
+				entities.player.move(entities.player);
+
+				if (event.key == ' ') {
+					tilemap.generate(size);
+				}
+
+				if ((entities.enemy1.x === entities.player.x && entities.enemy1.y === entities.player.y) || (entities.enemy2.x === entities.player.x && entities.enemy2.y === entities.player.y)) {
+					tilemap.generate(size);
+				}
+			};
+		</script>
+	</body>
+</html>
