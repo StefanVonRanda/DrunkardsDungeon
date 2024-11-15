@@ -56,7 +56,7 @@
 			<br />
 			<span>Blue: door</span>
 		</small>
-		<script>
+		<script defer>
 			const worldSize = 100;
 			const grid = 8;
 			const size = 1500;
@@ -178,7 +178,7 @@
 			const entities = {
 				canvas: document.querySelector('#entities'),
 				ctx: document.querySelector('#entities').getContext('2d'),
-				spriteSheet: 'sprites.png',
+				spriteSheet: './sprites.png',
 
 				collide: (direction) => {
 					if (tilemap.ctx.getImageData(entities.player.x + direction.x, entities.player.y + direction.y, entities.player.size, entities.player.size).data[1] == 158) {
